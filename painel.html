@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel de Produção - Dashboard TV</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=JetBrains+Mono:wght@600;700;800&display=swap" rel="stylesheet">
+<script>
+tailwind.config = {
+theme: {
+extend: {
+fontFamily: {
+sans: ['Inter', 'sans-serif'],
+mono: ['JetBrains Mono', 'monospace'],
+},
+colors: {
+tvDark: '#0B0F19',
+tvCard: '#111827',
+tvHeader: '#1F2937',
+tvBorder: '#374151',
+accentBlue: '#3B82F6',
+accentGreen: '#10B981',
+accentYellow: '#F59E0B',
+}
+}
+}
+}
+</script>
+<style>
+/* Desativa barra de rolagem global para garantir visual perfeito em telas de TV /
+body {
+overflow: hidden;
+user-select: none;
+}
+.pulse-live {
+animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+@keyframes pulse {
+0%, 100% { opacity: 1; }
+50% { opacity: 0.3; }
+}
+/* Efeito de destaque suave na alternância de página /
+.table-row-animate {
+transition: all 0.2s ease-in-out;
+}
+</style>
+</head>
+<body class="bg-tvDark text-slate-100 font-sans h-screen flex flex-col justify-between p-4 md:p-6">
+<!-- HEADER / CABEÇALHO DO PAINEL DA TV -->
+<header class="bg-tvCard border-b-2 border-accentBlue/40 rounded-xl p-4 shadow-2xl mb-4 flex flex-wrap items-center justify-between gap-4">
+<div class="flex items-center gap-4">
+<div class="bg-blue-600 text-white font-black px-4 py-2 rounded-lg text-xl tracking-wider flex items-center gap-2">
+<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+</svg>
+LINHA DE MONTAGEM
+</div>
+<div>
+<h1 class="text-2xl font-black text-white tracking-wide uppercase">Controle de Especificações e Veículos</h1>
+<p class="text-xs text-slate-400 font-medium">Exibição de Produção em Tempo Real • 20 Itens por Tela</p>
+</div>
+</div>
+<!-- RELÓGIO E STATUS DA TRANSMISSÃO -->
+<div class="flex items-center gap-6">
+<!-- Barra de Busca / Filtro rápido -->
+<div class="relative hidden lg:block w-64">
+<input type="text" id="searchInput" onkeyup="filterData()" placeholder="Filtrar por VIN / Serial..." class="w-full bg-slate-900 border border-slate-700 text-sm text-slate-200 px-3 py-2 rounded-lg focus:outline-none focus:border-accentBlue font-mono placeholder-slate-500">
+</div>
+<!-- Indicador LIVE -->
+<div class="flex items-center gap-2 bg-slate-900/80 border border-emerald-500/30 px-3 py-1.5 rounded-lg">
+<span class="w-3 h-3 bg-emerald-500 rounded-full pulse-live"></span>
+<span class="text-emerald-400 font-bold text-xs tracking-wider uppercase">AO VIVO</span>
+</div>
+<!-- Relógio Digital Grande para TV -->
+<div class="text-right">
+<div id="digitalClock" class="font-mono text-3xl font-black text-amber-400 leading-none tracking-tight">00:00:00</div>
+<div id="digitalDate" class="text-xs text-slate-400 font-semibold mt-1">00/00/0000</div>
+</div>
+</div>
+</header>
+<!-- ÁREA PRINCIPAL: TABELA COM 20 LINHAS -->
+<main class="flex-1 bg-tvCard rounded-xl border border-tvBorder shadow-2xl overflow-hidden flex flex-col justify-between">
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<!-- Cabeçalho da Tabela (Alta Visibilidade) -->
+<thead>
+<tr class="bg-tvHeader text-slate-300 font-bold text-sm lg:text-base border-b-2 border-slate-700 tracking-wider">
+<th class="py-3.5 px-4 text-center w-12 text-slate-500">#</th>
+<th class="py-3.5 px-4 text-emerald-400 font-mono">DEST</th>
+<th class="py-3.5 px-4 text-cyan-400 font-mono text-center">AIR</th>
+<th class="py-3.5 px-4 text-amber-300 font-mono">VIN#</th>
+<th class="py-3.5 px-4 text-blue-400 font-mono">SERIAL</th>
+<th class="py-3.5 px-4 text-purple-400 font-mono">CONTROL KEY</th>
+<th class="py-3.5 px-4 text-center text-slate-300 font-mono">B/DOOR</th>
+<th class="py-3.5 px-4 text-center text-slate-300 font-mono">INST</th>
+<th class="py-3.5 px-4 text-center text-slate-300 font-mono">SEAT</th>
+<th class="py-3.5 px-4 text-center text-slate-300 font-mono">TRANS</th>
+<th class="py-3.5 px-4 text-center text-slate-300 font-mono">MODEL</th>
+</tr>
+</thead>
+<!-- Corpo da Tabela (Populada via JS) -->
+<tbody id="tableBody" class="divide-y divide-slate-800/80 font-mono text-sm lg:text-base">
+<!-- Registros preenchidos dinamicamente -->
+</tbody>
+</table>
+</div>
+</main>
+<!-- RODAPÉ DA TV COM CONTROLES E PAGINAÇÃO AUTO-ROTATE -->
+<footer class="mt-4 bg-tvCard border border-tvBorder rounded-xl p-3 flex flex-wrap items-center justify-between gap-4">
+<!-- Controles de Auto-Rotação / Intervalo -->
+<div class="flex items-center gap-3">
+<button id="toggleAutoBtn" onclick="toggleAutoRotate()" class="bg-accentBlue hover:bg-blue-600 text-white font-bold px-4 py-2 rounded-lg text-sm transition flex items-center gap-2">
+<svg id="playPauseIcon" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+</svg>
+<span id="toggleAutoText">Pausar Rotação</span>
+</button>
+<!-- Barra de Progresso do Tempo da Rotação -->
+<div class="w-36 bg-slate-800 h-2.5 rounded-full overflow-hidden border border-slate-700 hidden sm:block">
+<div id="progressBar" class="bg-accentBlue h-full w-0 transition-all duration-100 ease-linear"></div>
+</div>
+<span class="text-xs text-slate-400 hidden sm:inline" id="timerLabel">Troca em: 10s</span>
+</div>
+<!-- Estatísticas da Linha de Produção -->
+<div class="hidden xl:flex items-center gap-6 text-xs font-semibold text-slate-400">
+<div>TOTAL CARREGADO: <span id="totalCount" class="text-white font-mono text-sm">40</span></div>
+<div>EXIBINDO POR TELA: <span class="text-emerald-400 font-mono text-sm">20</span></div>
+</div>
+<!-- Seletor de Páginas (Botões de Navegação Manual) -->
+<div class="flex items-center gap-2">
+<button onclick="prevPage()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-1.5 rounded-lg text-sm font-bold transition">
+&laquo; Anter.
+</button>
+<div class="bg-slate-900 border border-slate-700 px-4 py-1.5 rounded-lg text-sm font-bold font-mono">
+Página <span id="currentPageNum" class="text-amber-400">1</span> de <span id="totalPagesNum" class="text-slate-400">2</span>
+</div>
+<button onclick="nextPage()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-1.5 rounded-lg text-sm font-bold transition">
+Próx. &raquo;
+</button>
+</div>
+</footer>
+<!-- LÓGICA JAVASCRIPT -->
+<script>
+// Dados fiéis extraídos das imagens fornecidas pelo usuário
+const baseRealData = [
+{
+dest: "BH",
+air: "G",
+vin: "H94DFCAP15VB206990",
+serial: "03042",
+controlKey: "567206991",
+bdoor: "Y",
+inst: "5",
+seat: "B",
+trans: "C",
+model: "H",
+isReal: true
+},
+{
+dest: "BH",
+air: "G",
+vin: "H94DFCAP15VB206994",
+serial: "03046",
+controlKey: "567206994",
+bdoor: "Y",
+inst: "5",
+seat: "B",
+trans: "C",
+model: "H",
+isReal: true
+}
+];
+// Gerador de dados realistas complementares para popular exatamente 20 itens por tela
+function generateSampleData(count) {
+const result = [...baseRealData];
+const dests = ["BH", "SP", "RJ", "PR", "SC", "MG"];
+const airs = ["G", "A", "B", "F"];
+const seats = ["B", "A", "C"];
+const transList = ["C", "M", "A"];
+const models = ["H", "X", "Z", "K"];
+for (let i = 3; i <= count; i++) {
+const serialNum = 3046 + (i - 2);
+const vinNum = 206994 + (i - 2);
+const ctrlNum = 567206994 + (i - 2);
+result.push({
+dest: dests[Math.floor(Math.random() * dests.length)],
+air: airs[Math.floor(Math.random() * airs.length)],
+vin: `H94DFCAP15VB${vinNum}`,
+serial: String(serialNum).padStart(5, '0'),
+controlKey: String(ctrlNum),
+bdoor: Math.random() > 0.15 ? "Y" : "N",
+inst: String(Math.floor(Math.random() * 8) + 1),
+seat: seats[Math.floor(Math.random() * seats.length)],
+trans: transList[Math.floor(Math.random() * transList.length)],
+model: models[Math.floor(Math.random() * models.length)],
+isReal: false
+});
+}
+return result;
+}
+// Configuração de dados: 40 registros total = exatamente 2 páginas de 20 itens
+let dataset = generateSampleData(40);
+let filteredDataset = [...dataset];
+const ITEMS_PER_PAGE = 20;
+let currentPage = 1;
+let autoRotate = true;
+let rotateIntervalSec = 10;
+let timerSecondsLeft = rotateIntervalSec;
+let timerInterval = null;
+// Atualização do relógio digital da TV
+function updateClock() {
+const now = new Date();
+const timeStr = now.toLocaleTimeString('pt-BR');
+const dateStr = now.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' }).toUpperCase();
+document.getElementById('digitalClock').textContent = timeStr;
+document.getElementById('digitalDate').textContent = dateStr;
+}
+setInterval(updateClock, 1000);
+updateClock();
+// Renderização da tabela
+function renderTable() {
+const tbody = document.getElementById('tableBody');
+tbody.innerHTML = '';
+const totalPages = Math.ceil(filteredDataset.length / ITEMS_PER_PAGE) || 1;
+if (currentPage > totalPages) currentPage = totalPages;
+const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+const pageData = filteredDataset.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+pageData.forEach((item, index) => {
+const rowIndex = startIndex + index + 1;
+const tr = document.createElement('tr');
+// Destaque visual sutil para os itens fiéis da foto
+const highlightBg = item.isReal
+? 'bg-blue-950/40 hover:bg-blue-900/60 font-semibold'
+: 'hover:bg-slate-800/60';
+tr.className = `${highlightBg} table-row-animate transition-colors`;
+tr.innerHTML = `
+<td class="py-2.5 px-4 text-center font-bold text-slate-500 text-xs">${rowIndex}</td>
+<td class="py-2.5 px-4 font-bold text-emerald-400">${item.dest} <span class="text-xs text-slate-500">AIR</span> <span class="text-cyan-300">${item.air}</span></td>
+<td class="py-2.5 px-4 font-bold text-cyan-300 text-center">${item.air}</td>
+<td class="py-2.5 px-4 font-bold text-amber-300 tracking-wider">${item.vin}</td>
+<td class="py-2.5 px-4 font-bold text-blue-400">${item.serial}</td>
+<td class="py-2.5 px-4 font-bold text-purple-300">${item.controlKey}</td>
+<td class="py-2.5 px-4 text-center font-bold ${item.bdoor === 'Y' ? 'text-emerald-400' : 'text-slate-500'}">${item.bdoor}</td>
+<td class="py-2.5 px-4 text-center font-bold text-slate-200">${item.inst}</td>
+<td class="py-2.5 px-4 text-center font-bold text-slate-200">${item.seat}</td>
+<td class="py-2.5 px-4 text-center font-bold text-slate-200">${item.trans}</td>
+<td class="py-2.5 px-4 text-center font-bold text-slate-200">${item.model}</td>
+`;
+tbody.appendChild(tr);
+});
+// Atualização dos números da paginação
+document.getElementById('currentPageNum').textContent = currentPage;
+document.getElementById('totalPagesNum').textContent = totalPages;
+document.getElementById('totalCount').textContent = filteredDataset.length;
+}
+// Lógica de Paginação
+function nextPage() {
+const totalPages = Math.ceil(filteredDataset.length / ITEMS_PER_PAGE) || 1;
+currentPage = (currentPage % totalPages) + 1;
+resetTimer();
+renderTable();
+}
+function prevPage() {
+const totalPages = Math.ceil(filteredDataset.length / ITEMS_PER_PAGE) || 1;
+currentPage = currentPage === 1 ? totalPages : currentPage - 1;
+resetTimer();
+renderTable();
+}
+// Controle de Rotação Automática
+function toggleAutoRotate() {
+autoRotate = !autoRotate;
+const btnText = document.getElementById('toggleAutoText');
+const icon = document.getElementById('playPauseIcon');
+if (autoRotate) {
+btnText.textContent = "Pausar Rotação";
+icon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />`;
+resetTimer();
+} else {
+btnText.textContent = "Iniciar Rotação";
+icon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />`;
+document.getElementById('progressBar').style.width = '0%';
+document.getElementById('timerLabel').textContent = "Pausado";
+}
+}
+function resetTimer() {
+timerSecondsLeft = rotateIntervalSec;
+}
+// Loop de Tempo para Troca de Tela de TV
+setInterval(() => {
+if (!autoRotate) return;
+timerSecondsLeft -= 0.2;
+if (timerSecondsLeft <= 0) {
+nextPage();
+timerSecondsLeft = rotateIntervalSec;
+}
+// Atualiza barra de progresso visual
+const pct = ((rotateIntervalSec - timerSecondsLeft) / rotateIntervalSec) * 100;
+document.getElementById('progressBar').style.width = `${Math.min(100, Math.max(0, pct))}%`;
+document.getElementById('timerLabel').textContent = `Troca em: ${Math.ceil(timerSecondsLeft)}s`;
+}, 200);
+// Filtro de Busca
+function filterData() {
+const query = document.getElementById('searchInput').value.toUpperCase().trim();
+if (!query) {
+filteredDataset = [...dataset];
+} else {
+filteredDataset = dataset.filter(item =>
+item.vin.includes(query) ||
+item.serial.includes(query) ||
+item.controlKey.includes(query) ||
+item.dest.includes(query)
+);
+}
+currentPage = 1;
+renderTable();
+}
+// Inicialização na montagem da tela
+window.onload = function() {
+renderTable();
+};
+</script>
+</body>
+</html>
